@@ -35,14 +35,15 @@ DeckTemplate = ['S2','S3','S4','S5','S6','S7','S8','S9','S0','SJ','SQ','SK','SA'
                 'D2','D3','D4','D5','D6','D7','D8','D9','D0','DJ','DQ','DK','DA',
                 'C2','C3','C4','C5','C6','C7','C8','C9','C0','CJ','CQ','CK','CA']
 NumberOfDecks = 8
+DoubleSpace = '  '
 
 # Dynamic Variables
 MenuActive = True
 GameActive = False
 DealersDeck = []
-DealerScore = 0
+DealerScoreSoft = DealerScoreHard = 0
 DealerHand = []
-PlayerScore = 0
+PlayerScoreSoft = PlayerScoreHard = 0
 PlayerHand = []
 PlayerCash = 100 # Default cash for player is $100
 
@@ -50,10 +51,10 @@ PlayerCash = 100 # Default cash for player is $100
 def clear():
   os.system('cls' if os.name=='nt' else 'clear')
 
-def CardDecoder(card: str, currentScore: int):  # Decode the Card Lingo used in this program
-
+def CardDecoder(card: str, currentSoftScore: int,):  # Decode the Card Lingo used in this program
   suite = ''
-  value = 0
+  value = softValue = hardValue = 0
+  
   match card[0]: # Suite
     case 'S':
       suite = 'S'
@@ -70,34 +71,36 @@ def CardDecoder(card: str, currentScore: int):  # Decode the Card Lingo used in 
 
   match card[1]: # Value
     case '2':
-      value = 2
+      softValue = hardValue = 2
     case '3':
-      value = 3
+      softValue = hardValue = 3
     case '4':
-      value = 4
+      softValue = hardValue = 4
     case '5':
-      value = 5
+      softValue = hardValue = 5
     case '6':
-      value = 6
+      softValue = hardValue = 6
     case '7':
-      value = 7
+      softValue = hardValue = 7
     case '8':
-      value = 8
+      softValue = hardValue = 8
     case '9':
-      value = 9
+      softValue = hardValue = 9
     case '0': # 10
-      value = 10
+      softValue = hardValue = 10
     case 'J': # Jack
-      value = 10
+      softValue = hardValue = 10
     case 'Q': # Queen
-      value = 10
+      softValue = hardValue = 10
     case 'K': # King
-      value = 10
+      softValue = hardValue = 10
     case 'A': # Ace
       # Needs more work for Soft and Hard Hands
-      value = 11 if not currentScore + 11 > 21 else 1
+      softValue = 1
+      # value = 11 if not currentScore + 11 > 21 else 1
       
-  return (suite, value)
+  return (suite, softValue, hardValue)
+
 def DealerDeckShuffle():
 # Call this function whenever the Dealers Deck needs to be replaced.
   if DealersDeck != 0:
@@ -112,15 +115,18 @@ def DealerDeckShuffle():
   shuffle(DealersDeck)
 
 def CalculateScore(hand: list[str]):
-  score = 0 # Return Value
+  softScore = 0 # Return Value
+  hardScore = 0
   for card in hand:
-    score += CardDecoder(card, score)[1]
-  return score
+    softScore += CardDecoder(card, score)[1]
+    hardScore += CardDecoder(card, score)[2]
+  return (softScore, hardScore)
 
 def DealCard():
   card = DealersDeck[0]
   del DealersDeck[0]
   return card
+
 def ClearHands():
   PlayerHand.clear()
   DealerHand.clear()
@@ -128,11 +134,52 @@ def ClearHands():
 def Opening():
   # Deal the Starting hand
   # Player, Dealer, Player, Dealer face down
+  PlayerHand.append(DealCard())
+  PlayerHand.append(DealCard())
+  DealerHand.append(DealCard())
+  DealerHand.append(DealCard())
   pass
 
+def display(): # Output what the player needs to see
+  clear()
+  print(f'=------------------=')
+  print(f'| {DealerHand[0]}               |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'|                  |')
+  print(f'| {len(PlayerHand)}               |')
+  print(f'|     {PlayerHand[5] if len(PlayerHand) > 5 else DoubleSpace}           |')
+  print(f'|    {PlayerHand[4] if len(PlayerHand) > 4 else DoubleSpace}            |')
+  print(f'|   {PlayerHand[3] if len(PlayerHand) > 3 else DoubleSpace}             |')
+  print(f'|  {PlayerHand[2] if len(PlayerHand) > 2 else DoubleSpace}              |')
+  print(f'| {PlayerHand[1]}       SOFT: {PlayerScoreSoft} |')
+  print(f'|{PlayerHand[0]}        Hard: {PlayerScoreHard} |')
+  print(f'=------------------=')
+  pass
 
+def playBlackjack():
+  # Game Logic
+  # Make Deck
+  DealerDeckShuffle()
+  Opening()
 
+  while(GameActive):
+    CalculateScore(PlayerHand)
+    display()
+    input()
+    if len(PlayerHand) < 6:
+      PlayerHand.append(DealCard())
+      pass
 
+    
+    pass
+  pass
 
 
 
@@ -150,7 +197,8 @@ while(ProgramActive):
     #print (userSelection)
     match userSelection:
       case '1':
-        print('you chose 1')
+        GameActive = True
+        playBlackjack()
       case '2':
         print()
       case '3':
@@ -159,8 +207,3 @@ while(ProgramActive):
         print('Thanks for playing!')
       case _:
         print("Please enter a valid input.")
-  # Game Logic
-  while(GameActive):
-    print()
-  print()
-
