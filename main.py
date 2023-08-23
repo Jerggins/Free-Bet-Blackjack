@@ -23,6 +23,8 @@ PlayerScoreSoft = PlayerScoreHard = 0
 PlayerHand = []
 PlayerCash = 100 # Default cash for player is $100
 PlayerWager = 0
+playerInsuranceWager = 0
+odds = [2.5,2]
 
   # Action Condition Variables
 splitAction = False
@@ -125,7 +127,7 @@ def Opening():
 def display(): # Output what the player needs to see
   clear()
   print(f'=------------------=')
-  print(f'| {DealerHand[0]}            {CalculateScore(DealerHand)[1] if dealerReveal is True else CardDecoder(DealerHand[0])[1]} |')
+  print(f'| {DealerHand[0]}            {CalculateScore(DealerHand)[1] if dealerReveal is True else CardDecoder(DealerHand[0])[2]} |')
   print(f'|  {DealerHand[1] if dealerReveal is True else "**"}              |')
   print(f'|   {DealerHand[2] if len(DealerHand) > 2 else DoubleSpace}               |')
   print(f'|    {DealerHand[3] if len(DealerHand)  > 3 else DoubleSpace}            |')
@@ -143,11 +145,12 @@ def display(): # Output what the player needs to see
   print(f'| {PlayerHand[1]}       SOFT: {CalculateScore(PlayerHand)[0]} |')
   print(f'|{PlayerHand[0]}        Hard: {CalculateScore(PlayerHand)[1]} |')
   print(f'=------------------=')
-  print(f'{GameActive}')
+  print(f'${PlayerCash}')
   pass
 
 def ResetGame():
-  global PlayerWager, dealerReveal, playerTurn
+  global PlayerWager, dealerReveal, playerTurn, playerInsuranceWager
+  playerInsuranceWager = 0
   PlayerWager = 0
   playerTurn = True
   dealerReveal = False
@@ -172,6 +175,32 @@ def PlaceBets():
   PlayerCash -= PlayerWager
   pass
 
+def Blackjack():
+  return CalculateScore(PlayerHand)[1] == 21 and len(PlayerHand) == 2
+    
+def Payout(wager, victoryType: int):
+  global PlayerCash
+  payout = 0
+  match victoryType:
+    case 0: # Blackjack
+      payout = wager * odds[0]
+      PlayerCash += payout
+      print(f'Winnings: ${payout}')
+    case 1: # Standard Win
+      payout = wager * odds[1]
+      PlayerCash += payout
+      print(f'Winnings: ${payout}')
+    case 2: # Insurance Payout
+      payout = wager * odds[1]
+      PlayerCash += payout
+      print(f'Winnings: ${payout}')
+    case 3: # Push
+      payout = wager
+      PlayerCash += payout
+      print(f'Winnings: ${payout}')
+def DealerBlackjackCheck():
+  return CalculateScore(DealerHand)[1] == 21
+    
 # Action Conditions
 def updateCases(playerAction: str):
   global actionCases 
@@ -182,6 +211,7 @@ def updateCases(playerAction: str):
     playerAction.lower() != 'p', # Split
     playerAction.lower() != 'd'   # Double Down
   ]
+
 # Split Check
 def SplitCheck(hand: list[str]):
   
@@ -190,8 +220,39 @@ def SplitCheck(hand: list[str]):
     return False
   
   pass
+
 # Insurance Check
-def InsuranceCheck():pass
+def InsuranceCheck():
+  global playerTurn, PlayerCash, playerInsuranceWager
+  # If the Dealers first card is an Ace, offer insurance
+  if DealerHand[0][1] == 'A':
+    print('Would you like Insurance? (COST OF INSURANCE)')
+    
+    while True:
+      # Loop until a valid answer is received
+      prompt = input('Y/N: ')
+      # If the user inputs a valid answer, break loop and continue
+      if prompt.lower() == 'y':
+        # If the User accepts Insurance, add half of their original wager to the wager
+        PlayerCash -= (PlayerWager / 2)# Remove from Cash
+        playerInsuranceWager += (PlayerWager / 2)# Add to wager
+        # After insurance is collected, check if the Dealer has 21
+        # If dealer does not have 21, continue as normal; Else, end the game and payout insurance
+        if DealerBlackjackCheck(): # Dealer has 21
+          playerTurn = False # End Turn
+          Payout(playerInsuranceWager,2) # Give player Insurance Payout
+          break
+        break
+      elif prompt.lower() == 'n': # No Insurance
+        if DealerBlackjackCheck(): # If Dealer has 21
+          playerTurn = False # End Turn
+          playerInsuranceWager = 0
+        break
+      else:
+        print('Please input a valid option')
+    pass
+  pass
+  
 # Double Down Check
 def DoubleDownCheck(hand: list[str]):
   # No Double Down on Split Hands
@@ -199,20 +260,21 @@ def DoubleDownCheck(hand: list[str]):
     return False
   # Player may only have two cards to be eligible for Double Down
   # Free Double if two-card hard score is 9, 10, or 11
-  
-  
   return len(hand) == 2
-
-def PlayerTurn():
-  # The Player should be given a valid option for their turn
+def PlayerTurn():# The Player should be given a valid option for their turn
   global playerTurn, PlayerCash, PlayerWager
   prompt = '(H)it | (S)tand'
   playerAction = ''
+  # Insurance Check
+  InsuranceCheck()
   # Double Down Check
   if DoubleDownCheck(PlayerHand):
     prompt += ' | (D)ouble Down'
   updateCases(playerAction)
-  if playerTurn is True:
+  if Blackjack():
+    playerTurn = False      
+  if playerTurn is True and any([CalculateScore(PlayerHand)[0] < 21, CalculateScore(PlayerHand)[1] < 21]) and len(PlayerHand) < 6:
+    
     print(prompt)
     while all(actionCases):
       playerAction = input('Action: ')
@@ -220,28 +282,47 @@ def PlayerTurn():
     # Ensure Valid Selection
     match playerAction.lower():
       case 'h':
-        PlayerHand.append(DealCard())
+        PlayerHand.append(DealCard()) # Deal Card
       case 's':
-        playerTurn = False
+        playerTurn = False # End Turn
       case 'd':
         # If Double Down is chosen, Double the Wager and make the next card the final card
         PlayerCash -= PlayerWager # Remove funds
         PlayerWager += PlayerWager # Double Down
         PlayerHand.append(DealCard()) # Deal Card
         playerTurn = False # End Turn
-        pass
       case 'l':
         pass
-
+  else:
+    playerTurn = False
+def DetermineResults():
+  playerScores = CalculateScore(PlayerHand)
+  dealerScores = CalculateScore(DealerHand)
+  #1: If player is over 21 they bust
+  if playerScores[0] > 21 and playerScores[1] > 21:
+    return 0 
+  #2: If dealer is 22, Push
+  elif any([dealerScores[0] == 22, dealerScores[1] == 22]):
+    return 1
+  #3: If dealer is over 22 and player is under 22, payout
+  elif any([dealerScores[0] > 22, dealerScores[1] > 22]):
+    return 2
+  #4: Dealer and Player are tied
+  elif dealerScores[1] == playerScores[1]:
+    return 3
+  #5: Dealer's score is higher
+  elif dealerScores[1] > playerScores[1]:
+    return 4
+  #6: Player's score is higher
+  elif dealerScores[1] < playerScores[1]:
+    return 5
 def DealerTurn():
   global playerTurn, dealerReveal
   if not playerTurn:
     dealerReveal = True
-    while CalculateScore(DealerHand)[1] < 17:
+    while CalculateScore(DealerHand)[1] < 17: # Dealer stops receiving cards at hard 17
       DealerHand.append(DealCard())
       display()
-      pass
-  pass
 
 def playBlackjack():
   # Game Logic
@@ -255,10 +336,10 @@ def playBlackjack():
   # Deal Opening Hand
   if len(PlayerHand) == 0:
     Opening()
-  display()
+  display() # Update Screen
   PlayerTurn()
   DealerTurn()
-  display()
+  display() # Update Screen
   if playerTurn is False and CalculateScore(DealerHand)[1] >= 17:
     GameActive = False
     pass
@@ -266,7 +347,33 @@ def playBlackjack():
   if not GameActive:
     playAgain = ''
     # Show Results
-    
+    match DetermineResults():
+      case 0:
+        print("You are bust!")
+      case 1: # Dealer busts with 22
+        print('Dealer bust with 22, bets are pushed.')
+        Payout(PlayerWager,3)
+      case 2: # Dealer busts over 22
+        print('Dealer bust over 22, you win!')
+        if Blackjack():
+          Payout(PlayerWager,0)
+        else:
+          Payout(PlayerWager,1)
+      case 3: # Tied
+        print('Tied with the Dealer! Bets are pushed.')
+        Payout(PlayerWager,3)
+        pass
+      case 4: # Dealer Wins
+        print('Dealer wins')
+        pass
+      case 5: # 
+        print('Your score is higher! You win!')
+        if Blackjack():
+          Payout(PlayerWager,0)
+        else:
+          Payout(PlayerWager,1)
+        pass
+        
     while True:
       # Loop until a valid answer is received
       playAgain = input('Would you like to play again? [y/n] : ')
