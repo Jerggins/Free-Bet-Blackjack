@@ -1,0 +1,5 @@
+Do not allow players to buy insurance if they do not have enough money
+Do not allow players to double down if they cannot afford it
+Display Cost of Insurance
+Splitting
+Cashout

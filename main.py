@@ -21,7 +21,7 @@ DealerHand = []
 playerTurn = True
 PlayerScoreSoft = PlayerScoreHard = 0
 PlayerHand = []
-PlayerCash = 100 # Default cash for player is $100
+PlayerCash = 25 # Default cash for player is $100
 PlayerWager = 0
 playerInsuranceWager = 0
 odds = [2.5,2]
@@ -127,23 +127,23 @@ def Opening():
 def display(): # Output what the player needs to see
   clear()
   print(f'=------------------=')
-  print(f'| {DealerHand[0]}            {CalculateScore(DealerHand)[1] if dealerReveal is True else CardDecoder(DealerHand[0])[2]} |')
-  print(f'|  {DealerHand[1] if dealerReveal is True else "**"}              |')
-  print(f'|   {DealerHand[2] if len(DealerHand) > 2 else DoubleSpace}               |')
-  print(f'|    {DealerHand[3] if len(DealerHand)  > 3 else DoubleSpace}            |')
-  print(f'|                  |')
-  print(f'|                  |')
-  print(f'|                  |')
-  print(f'|                  |')
-  print(f'|                  |')
-  print(f'|                  |')
-  print(f'| {len(PlayerHand)}               |')
-  print(f'|     {PlayerHand[5] if len(PlayerHand) > 5 else DoubleSpace}           |')
-  print(f'|    {PlayerHand[4] if len(PlayerHand) > 4 else DoubleSpace}            |')
-  print(f'|   {PlayerHand[3] if len(PlayerHand) > 3 else DoubleSpace}             |')
-  print(f'|  {PlayerHand[2] if len(PlayerHand) > 2 else DoubleSpace}      Wager: {PlayerWager} |')
-  print(f'| {PlayerHand[1]}       SOFT: {CalculateScore(PlayerHand)[0]} |')
-  print(f'|{PlayerHand[0]}        Hard: {CalculateScore(PlayerHand)[1]} |')
+  print(f' {DealerHand[0]}            {CalculateScore(DealerHand)[1] if dealerReveal is True else CardDecoder(DealerHand[0])[2]}')
+  print(f'  {DealerHand[1] if dealerReveal is True else "**"}')
+  print(f'   {DealerHand[2] if len(DealerHand) > 2 else DoubleSpace}')
+  print(f'    {DealerHand[3] if len(DealerHand)  > 3 else DoubleSpace}')
+  print(f'     {DealerHand[4] if len(DealerHand)  > 4 else DoubleSpace}')
+  print(f'      {DealerHand[5] if len(DealerHand)  > 5 else DoubleSpace}')
+  print(f'')
+  print(f'')
+  print(f'')
+  print(f'')
+  print(f'')
+  print(f'     {PlayerHand[5] if len(PlayerHand) > 5 else DoubleSpace}')
+  print(f'    {PlayerHand[4] if len(PlayerHand) > 4 else DoubleSpace}')
+  print(f'   {PlayerHand[3] if len(PlayerHand) > 3 else DoubleSpace}')
+  print(f'  {PlayerHand[2] if len(PlayerHand) > 2 else DoubleSpace}     Wager: ${PlayerWager}')
+  print(f' {PlayerHand[1]}       SOFT:  {CalculateScore(PlayerHand)[0]}')
+  print(f'{PlayerHand[0]}        Hard:  {CalculateScore(PlayerHand)[1]}')
   print(f'=------------------=')
   print(f'${PlayerCash}')
   pass
@@ -164,7 +164,7 @@ def PlaceBets():
   while PlayerWager == 0:
     
     try:
-      PlayerWager = int(input(f'Please make a wager. Money Available (${PlayerCash}) : '))
+      PlayerWager = float(input(f'Please make a wager. Money Available (${PlayerCash}) : '))
       if PlayerWager > PlayerCash or PlayerWager < 1:
         print(f'\nInsufficient Funds, please enter a amount between 1 and {PlayerCash}')
         PlayerWager = 0
@@ -175,8 +175,8 @@ def PlaceBets():
   PlayerCash -= PlayerWager
   pass
 
-def Blackjack():
-  return CalculateScore(PlayerHand)[1] == 21 and len(PlayerHand) == 2
+def Blackjack(hand: list[str]):
+  return CalculateScore(hand)[1] == 21 and len(hand) == 2
     
 def Payout(wager, victoryType: int):
   global PlayerCash
@@ -225,10 +225,13 @@ def SplitCheck(hand: list[str]):
 def InsuranceCheck():
   global playerTurn, PlayerCash, playerInsuranceWager
   # If the Dealers first card is an Ace, offer insurance
-  if DealerHand[0][1] == 'A':
-    print('Would you like Insurance? (COST OF INSURANCE)')
-    
-    while True:
+  while True:
+    if DealerHand[0][1] == 'A':
+      if (PlayerWager / 2) > PlayerCash:
+        print('You cannot afford insurance.')
+        break
+      else:
+        print(f'Would you like Insurance? ({PlayerWager / 2})')
       # Loop until a valid answer is received
       prompt = input('Y/N: ')
       # If the user inputs a valid answer, break loop and continue
@@ -238,20 +241,20 @@ def InsuranceCheck():
         playerInsuranceWager += (PlayerWager / 2)# Add to wager
         # After insurance is collected, check if the Dealer has 21
         # If dealer does not have 21, continue as normal; Else, end the game and payout insurance
-        if DealerBlackjackCheck(): # Dealer has 21
-          playerTurn = False # End Turn
-          Payout(playerInsuranceWager,2) # Give player Insurance Payout
-          break
         break
       elif prompt.lower() == 'n': # No Insurance
-        if DealerBlackjackCheck(): # If Dealer has 21
-          playerTurn = False # End Turn
-          playerInsuranceWager = 0
+        print('No insurance issued.')
         break
       else:
         print('Please input a valid option')
-    pass
-  pass
+    else:
+      break
+  # Check if Dealer has blackjack
+  if DealerBlackjackCheck(): # Check Dealers hand for Blackjack, If Blackjack...
+    playerTurn = False  # End Turn
+    print(f'Dealer shows a {DealerHand[0]} and {DealerHand[1]} for Blackjack')
+    if playerInsuranceWager > 0: # If the player bought insurance
+      Payout(playerInsuranceWager,2) # Payout insurance wager
   
 # Double Down Check
 def DoubleDownCheck(hand: list[str]):
@@ -266,12 +269,13 @@ def PlayerTurn():# The Player should be given a valid option for their turn
   prompt = '(H)it | (S)tand'
   playerAction = ''
   # Insurance Check
-  InsuranceCheck()
+  if playerInsuranceWager == 0:
+    InsuranceCheck()
   # Double Down Check
-  if DoubleDownCheck(PlayerHand):
+  if DoubleDownCheck(PlayerHand) and PlayerWager < PlayerCash:
     prompt += ' | (D)ouble Down'
   updateCases(playerAction)
-  if Blackjack():
+  if Blackjack(PlayerHand):
     playerTurn = False      
   if playerTurn is True and any([CalculateScore(PlayerHand)[0] < 21, CalculateScore(PlayerHand)[1] < 21]) and len(PlayerHand) < 6:
     
@@ -286,6 +290,7 @@ def PlayerTurn():# The Player should be given a valid option for their turn
       case 's':
         playerTurn = False # End Turn
       case 'd':
+        
         # If Double Down is chosen, Double the Wager and make the next card the final card
         PlayerCash -= PlayerWager # Remove funds
         PlayerWager += PlayerWager # Double Down
@@ -323,7 +328,7 @@ def DealerTurn():
     while CalculateScore(DealerHand)[1] < 17: # Dealer stops receiving cards at hard 17
       DealerHand.append(DealCard())
       display()
-
+      
 def playBlackjack():
   # Game Logic
   global GameActive
@@ -355,7 +360,7 @@ def playBlackjack():
         Payout(PlayerWager,3)
       case 2: # Dealer busts over 22
         print('Dealer bust over 22, you win!')
-        if Blackjack():
+        if Blackjack(PlayerHand):
           Payout(PlayerWager,0)
         else:
           Payout(PlayerWager,1)
@@ -368,7 +373,7 @@ def playBlackjack():
         pass
       case 5: # 
         print('Your score is higher! You win!')
-        if Blackjack():
+        if Blackjack(PlayerHand):
           Payout(PlayerWager,0)
         else:
           Payout(PlayerWager,1)
