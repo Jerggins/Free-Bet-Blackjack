@@ -1,5 +1,8 @@
-Do not allow players to buy insurance if they do not have enough money
-Do not allow players to double down if they cannot afford it
-Display Cost of Insurance
-Splitting
+Settings:
+  Change Starting Balance
+  Save/Load Profile
+Splitting:
+  Make Second Hand for player
+  Ensure the program can detect and then calculate for the second hand
+  
 Cashout
