@@ -2,7 +2,12 @@ Settings:
   Change Starting Balance
   Save/Load Profile
 Splitting:
-  Make Second Hand for player
-  Ensure the program can detect and then calculate for the second hand
-  
+  Make Second Hand for player - GOOD
+  Ensure the program can detect and then calculate for the second hand - GOOD
+  Second hand needs its own wager that matches the current wager - GOOD
+  Second hand needs to be payed out accordingly - GOOD
+
+Six Card Charlie (SCC):
+  Six Card Charlie is detected but does not secure a win
+  SCC should be an instant win.
 Cashout

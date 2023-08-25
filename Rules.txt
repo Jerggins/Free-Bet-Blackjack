@@ -1,17 +1,11 @@
 #Console Based Blackjack Free Bet
 #Rules:
-#  
-#  
-#  
 #  Free spli on all pairs except 10, J, Q, K
 #  Free double on your two-card hard 9, 10, and 11 totals
-#  Split initial cards of equal value
-#  One split per hand
 #  Single card dealt to each split Aces
-#  No double after split
-#  Six Card Charlie: you win if you have six cards with a value of 21 or less
 #  
-#
+#  Six Card Charlie: you win if you have six cards with a value of 21 or less
+
 #  Card Format:
 #  Suites: Spades (S), Hearts (H), Diamonds (D), Clubs (C)
 #  Values: 2, 3, 4, 5, 6, 7, 8, 9, 10 (0),Jack (J), Queen (Q), King (K), Ace, (A)
@@ -27,3 +21,6 @@ Completed:
   Insurance pays 2 to 1
   Your bet is returned when hands are of equal value
   Your bet is returned when the dealer busts with a score of 22.
+  One split per hand
+  Split initial cards of equal value
+  No double after split

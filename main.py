@@ -21,13 +21,15 @@ DealerHand = []
 playerTurn = True
 PlayerScoreSoft = PlayerScoreHard = 0
 PlayerHand = []
-PlayerCash = 25 # Default cash for player is $100
+playerHand2 = []
+PlayerCash = 100 # Default cash for player is $100
 PlayerWager = 0
 playerInsuranceWager = 0
 odds = [2.5,2]
 
   # Action Condition Variables
 splitAction = False
+insuranceAction = False
 
 # Functions
 def clear():
@@ -114,6 +116,7 @@ def DealCard():
 def ClearHands():
   PlayerHand.clear()
   DealerHand.clear()
+  playerHand2.clear()
   
 def Opening():
   # Deal the Starting hand
@@ -138,22 +141,24 @@ def display(): # Output what the player needs to see
   print(f'')
   print(f'')
   print(f'')
-  print(f'     {PlayerHand[5] if len(PlayerHand) > 5 else DoubleSpace}')
-  print(f'    {PlayerHand[4] if len(PlayerHand) > 4 else DoubleSpace}')
-  print(f'   {PlayerHand[3] if len(PlayerHand) > 3 else DoubleSpace}')
-  print(f'  {PlayerHand[2] if len(PlayerHand) > 2 else DoubleSpace}     Wager: ${PlayerWager}')
-  print(f' {PlayerHand[1]}       SOFT:  {CalculateScore(PlayerHand)[0]}')
-  print(f'{PlayerHand[0]}        Hard:  {CalculateScore(PlayerHand)[1]}')
+  print(f'     {PlayerHand[5] if len(PlayerHand) > 5 else DoubleSpace}               {playerHand2[5] if len(playerHand2) > 5 else DoubleSpace}')
+  print(f'    {PlayerHand[4] if len(PlayerHand) > 4 else DoubleSpace}               {playerHand2[4] if len(playerHand2) > 4 else DoubleSpace}')
+  print(f'   {PlayerHand[3] if len(PlayerHand) > 3 else DoubleSpace}               {playerHand2[3] if len(playerHand2) > 3 else DoubleSpace}')
+  print(f'  {PlayerHand[2] if len(PlayerHand) > 2 else DoubleSpace}               {playerHand2[2] if len(playerHand2) > 2 else DoubleSpace}')
+  print(f' {PlayerHand[1] if len(PlayerHand) > 1 else DoubleSpace} SOFT: [{CalculateScore(PlayerHand)[0]}]    {playerHand2[1] if len(playerHand2) > 1 else DoubleSpace} SOFT: [{CalculateScore(playerHand2)[0]}]                ')
+  print(f'{PlayerHand[0]}  Hard: [{CalculateScore(PlayerHand)[1]}]   {playerHand2[0] if splitAction else DoubleSpace}  Hard: [{CalculateScore(playerHand2)[1]}]')
   print(f'=------------------=')
-  print(f'${PlayerCash}')
+  print(f'Balance: ${PlayerCash} | Wager: ${PlayerWager}')
   pass
 
 def ResetGame():
-  global PlayerWager, dealerReveal, playerTurn, playerInsuranceWager
+  global PlayerWager, dealerReveal, playerTurn, playerInsuranceWager, splitAction, insuranceAction
   playerInsuranceWager = 0
   PlayerWager = 0
   playerTurn = True
   dealerReveal = False
+  splitAction = False
+  insuranceAction = False
   ClearHands()
   
   pass
@@ -164,7 +169,7 @@ def PlaceBets():
   while PlayerWager == 0:
     
     try:
-      PlayerWager = float(input(f'Please make a wager. Money Available (${PlayerCash}) : '))
+      PlayerWager = float(input(f'Please make a wager. Money Available (${PlayerCash}): '))
       if PlayerWager > PlayerCash or PlayerWager < 1:
         print(f'\nInsufficient Funds, please enter a amount between 1 and {PlayerCash}')
         PlayerWager = 0
@@ -212,18 +217,48 @@ def updateCases(playerAction: str):
     playerAction.lower() != 'd'   # Double Down
   ]
 
+# Split Action
+def SplitHand(card: str):
+  global playerHand2, PlayerCash, PlayerHand
+  PlayerCash -= PlayerWager
+  playerSplitTurn = True
+  playerHand2.append(card)
+  PlayerHand.pop(1)
+  prompt = 'H: Hit | S: Stand'
+  while playerSplitTurn is True and any([CalculateScore(playerHand2)[0] < 21, CalculateScore(playerHand2)[1] < 21]) and len(playerHand2) < 6:
+    playerAction = ''
+    while all([playerAction != 'h', playerAction !='s']):
+      print(prompt)
+      display()
+      playerAction = input('Action: ')
+    # Ensure Valid Selection
+    match playerAction.lower():
+      case 'h':
+        playerHand2.append(DealCard()) # Deal Card
+        
+      case 's':
+        playerSplitTurn = False # End Turn 
+  pass
+
 # Split Check
 def SplitCheck(hand: list[str]):
-  
+  PlayerCards = None
+  if not splitAction:
+    PlayerCards = CardDecoder(hand[0])[2] == CardDecoder(hand[1])[2]
+
+  if not splitAction and PlayerCards:
+    print('Split opportunity')
+    return True
+    pass
   # Eligible for split?
   if splitAction: # If user has already split their hands
     return False
   
   pass
-
+  
 # Insurance Check
 def InsuranceCheck():
-  global playerTurn, PlayerCash, playerInsuranceWager
+  global playerTurn, PlayerCash, playerInsuranceWager, insuranceAction
   # If the Dealers first card is an Ace, offer insurance
   while True:
     if DealerHand[0][1] == 'A':
@@ -255,7 +290,7 @@ def InsuranceCheck():
     print(f'Dealer shows a {DealerHand[0]} and {DealerHand[1]} for Blackjack')
     if playerInsuranceWager > 0: # If the player bought insurance
       Payout(playerInsuranceWager,2) # Payout insurance wager
-  
+  insuranceAction = True
 # Double Down Check
 def DoubleDownCheck(hand: list[str]):
   # No Double Down on Split Hands
@@ -264,16 +299,21 @@ def DoubleDownCheck(hand: list[str]):
   # Player may only have two cards to be eligible for Double Down
   # Free Double if two-card hard score is 9, 10, or 11
   return len(hand) == 2
+  
 def PlayerTurn():# The Player should be given a valid option for their turn
-  global playerTurn, PlayerCash, PlayerWager
-  prompt = '(H)it | (S)tand'
+  global playerTurn, PlayerCash, PlayerWager, splitAction
+  prompt = 'H: Hit | S: Stand'
   playerAction = ''
   # Insurance Check
-  if playerInsuranceWager == 0:
+  if playerInsuranceWager == 0 and not insuranceAction:
     InsuranceCheck()
+
+  # Split Check
+  if SplitCheck(PlayerHand) and PlayerWager <= PlayerCash:
+    prompt += ' | L: Split'
   # Double Down Check
-  if DoubleDownCheck(PlayerHand) and PlayerWager < PlayerCash:
-    prompt += ' | (D)ouble Down'
+  if DoubleDownCheck(PlayerHand) and PlayerWager <= PlayerCash:
+    prompt += ' | D: Double Down'
   updateCases(playerAction)
   if Blackjack(PlayerHand):
     playerTurn = False      
@@ -290,37 +330,51 @@ def PlayerTurn():# The Player should be given a valid option for their turn
       case 's':
         playerTurn = False # End Turn
       case 'd':
-        
         # If Double Down is chosen, Double the Wager and make the next card the final card
         PlayerCash -= PlayerWager # Remove funds
         PlayerWager += PlayerWager # Double Down
         PlayerHand.append(DealCard()) # Deal Card
         playerTurn = False # End Turn
       case 'l':
+        # If the player chooses to split
+        splitAction = True # Set splitAction to True
+        SplitHand(PlayerHand[1])# Split Hand Function
         pass
   else:
     playerTurn = False
-def DetermineResults():
-  playerScores = CalculateScore(PlayerHand)
+  if len(PlayerHand) == 6:
+    print('Six Card Charlie!')
+    
+def DetermineResults(hand: list[str]):
+  playerScores = CalculateScore(hand)
   dealerScores = CalculateScore(DealerHand)
   #1: If player is over 21 they bust
   if playerScores[0] > 21 and playerScores[1] > 21:
-    return 0 
+    print("You are bust!")
   #2: If dealer is 22, Push
   elif any([dealerScores[0] == 22, dealerScores[1] == 22]):
-    return 1
+    print('Dealer bust with 22, bets are pushed.')
+    Payout(PlayerWager,3)
   #3: If dealer is over 22 and player is under 22, payout
   elif any([dealerScores[0] > 22, dealerScores[1] > 22]):
-    return 2
+    print('Dealer bust over 22, you win!')
+    if Blackjack(PlayerHand):
+      Payout(PlayerWager,0)
+    else:
+      Payout(PlayerWager,1)
   #4: Dealer and Player are tied
   elif dealerScores[1] == playerScores[1]:
-    return 3
-  #5: Dealer's score is higher
+    print('Tied with the Dealer! Bets are pushed.')
+    Payout(PlayerWager,3)  #5: Dealer's score is higher
   elif dealerScores[1] > playerScores[1]:
-    return 4
+    print('Dealer wins')
   #6: Player's score is higher
   elif dealerScores[1] < playerScores[1]:
-    return 5
+    print('Your score is higher! You win!')
+    if Blackjack(PlayerHand):
+      Payout(PlayerWager,0)
+    else:
+      Payout(PlayerWager,1)
 def DealerTurn():
   global playerTurn, dealerReveal
   if not playerTurn:
@@ -328,7 +382,7 @@ def DealerTurn():
     while CalculateScore(DealerHand)[1] < 17: # Dealer stops receiving cards at hard 17
       DealerHand.append(DealCard())
       display()
-      
+    
 def playBlackjack():
   # Game Logic
   global GameActive
@@ -352,33 +406,10 @@ def playBlackjack():
   if not GameActive:
     playAgain = ''
     # Show Results
-    match DetermineResults():
-      case 0:
-        print("You are bust!")
-      case 1: # Dealer busts with 22
-        print('Dealer bust with 22, bets are pushed.')
-        Payout(PlayerWager,3)
-      case 2: # Dealer busts over 22
-        print('Dealer bust over 22, you win!')
-        if Blackjack(PlayerHand):
-          Payout(PlayerWager,0)
-        else:
-          Payout(PlayerWager,1)
-      case 3: # Tied
-        print('Tied with the Dealer! Bets are pushed.')
-        Payout(PlayerWager,3)
-        pass
-      case 4: # Dealer Wins
-        print('Dealer wins')
-        pass
-      case 5: # 
-        print('Your score is higher! You win!')
-        if Blackjack(PlayerHand):
-          Payout(PlayerWager,0)
-        else:
-          Payout(PlayerWager,1)
-        pass
-        
+    DetermineResults(PlayerHand)
+    if splitAction:
+      print('\nSplit hand results:')
+      DetermineResults(playerHand2)
     while True:
       # Loop until a valid answer is received
       playAgain = input('Would you like to play again? [y/n] : ')
@@ -394,23 +425,21 @@ def playBlackjack():
       else:
         clear()
         print('Please input a valid option')
-      
-
   pass
 
+def MainMenu():
+  clear()
+  print("Welcome to BlackJack")
+  print("1 | Play")
+  print("2 | Settings")
+  print("3 | Quit")
+  return input("Choose a menu option: ")
 # Main Code
 while(ProgramActive):
-
   # Main Menu
   while(MenuActive):
-    clear()
-    print("Welcome to BlackJack")
-    print("1 | Play")
-    print("2 | Settings")
-    print("3 | Quit")
-    userSelection = input("Choose a menu option: ")
     #print (userSelection)
-    match userSelection:
+    match MainMenu():
       case '1':
         while True:
           GameActive = True
